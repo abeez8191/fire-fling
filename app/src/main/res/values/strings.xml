@@ -1,0 +1,32 @@
+<resources>
+    <string name="app_name">Fire Fling</string>
+    <string name="url_hint">Search or enter URL</string>
+    <string name="url_no_search_hint">Enter URL</string>
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="one_video_found">There was one video found.</string>
+    <string name="multiple_videos_found">There were multiple videos found.</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="rewinds_stream_10_seconds">Rewinds stream 10 seconds.</string>
+    <string name="plays_video">Plays video.</string>
+    <string name="stops_streaming_video">Stops streaming video.</string>
+    <string name="fast_forwards_stream_10_seconds">Fast forwards stream 10 seconds.</string>
+    <string name="pauses_video">Pauses current video</string>
+    <string name="menu_fling">Connect to Device</string>
+    <string name="btn_disconnect">Disconnect</string>
+    <string name="btn_close">Close</string>
+    <string name="communication_error">Communication Error</string>
+    <string name="cancel">Cancel</string>
+    <string name="pick_a_video">Pick a Video</string>
+    <string name="invalid_url_format">Invalid URL format</string>
+    <string name="must_connect_to_device">You must be connected to a device in order to fling a video.</string>
+    <string name="error_setting_update_interval">Error attempting set update interval, ignoring</string>
+    <string name="error_attempting_to_play">Error attempting to Play:</string>
+    <string name="error_playing">Error Playing</string>
+    <string name="error_pausing">Error Pausing</string>
+    <string name="error_stopping">Error Stopping</string>
+    <string name="error_seeking">Error Seeking</string>
+    <string name="error_connecting_to_device">Problem with connection. Try again and check the target player.</string>
+</resources>
