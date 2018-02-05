@@ -1180,43 +1180,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-/*    private class MediaTitleUpdateTask extends AsyncTask<Void, Void, MediaPlayerInfo> {
-        private static final String TAG = "MediaTitleUpdateTask";
-
-        @Override
-        protected MediaPlayerInfo doInBackground(Void... voids) {
-            int threadId = android.os.Process.myTid();
-            if (mCurrentDevice != null) {
-                try {
-                    Log.i(TAG, "["+threadId+"]"+"MediaTitleUpdateTask:getMediaInfo");
-                    return mCurrentDevice.getMediaInfo().get();
-                } catch (InterruptedException e) {
-                    Log.e(TAG, "["+threadId+"]"+"InterruptedException msg=" + e);
-                    return null;
-                } catch (ExecutionException e) {
-                    Log.e(TAG, "["+threadId+"]"+"ExecutionException msg=" + e);
-                    return null;
-                }
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(MediaPlayerInfo result) {
-            if (result != null) {
-                //try {
-                    //JSONObject jobj = (JSONObject) new JSONTokener(result.getMetadata()).nextValue();
-                    Log.i(TAG, "[main]" + "MediaTitleUpdateTask:onPostExecute:set mediaTitleView");
-                    //mMediaTitleView.setText((String)jobj.get("title"));
-                    //setStatusAndTitleVisibility(true);
-                    mMediaTitleSet = true;
-*//*                } catch (JSONException e) {
-                    Log.e(TAG, "Cannot parse Metadata", e);
-                }*//*
-            }
-        }
-    }*/
-
     private class CurrentPositionUpdateTask extends AsyncTask<Void, Void, Long> {
         private static final String TAG = "CurrentPosUpdateTask";
 
