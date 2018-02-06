@@ -2,12 +2,14 @@ package com.abeez.firefling;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.preference.PreferenceManager;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -64,7 +66,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements
+        View.OnClickListener, SharedPreferences.OnSharedPreferenceChangeListener
+{
 
     private static final String BUNDLE_CURRENT_URL = "currentUrl";
 
@@ -247,6 +251,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             currentUrl = Utils.convertStringToUri("https://www.google.com");
             mWebView.loadUrl(currentUrl.toString());
         }
+
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        allowSearch = sharedPreferences.getBoolean(getString(R.string.pref_do_search_key),
+                getResources().getBoolean(R.bool.pref_do_search_default));
+
+        // Register the listener
+        sharedPreferences.registerOnSharedPreferenceChangeListener(this);
     }
 
     @Override
@@ -514,6 +525,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void setMediaContainerVisibility(int visibility) {
         synchronized(mStatusLock) {
             MediaState mState = mStatus.mState;
+            if( mState == null ) {
+                return;
+            }
+
             if( visibility == View.GONE || visibility == View.INVISIBLE) {
                 if( mState == MediaState.ReadyToPlay ||
                     mState == MediaState.Playing ||
@@ -627,6 +642,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onDestroy() {
         Log.e(TAG, "onDestroy");
         super.onDestroy();
+
+        // Unregister MainActivity as an OnPreferenceChangedListener to avoid any memory leaks.
+        PreferenceManager.getDefaultSharedPreferences(this)
+                .unregisterOnSharedPreferenceChangeListener(this);
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if( key.equals(getString(R.string.pref_do_search_key)) ) {
+            allowSearch = sharedPreferences.getBoolean(getString(R.string.pref_do_search_key),
+                    getResources().getBoolean(R.bool.pref_do_search_default));
+        }
     }
 
     private void addVideo(String url) {
@@ -721,6 +748,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         .show();
                 return true;
             }
+        }
+        else if( id == R.id.action_settings ) {
+            Intent startSettingsActivity = new Intent(this, SettingsActivity.class);
+            startActivity(startSettingsActivity);
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }

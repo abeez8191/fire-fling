@@ -29,4 +29,9 @@
     <string name="error_stopping">Error Stopping</string>
     <string name="error_seeking">Error Seeking</string>
     <string name="error_connecting_to_device">Problem with connection. Try again and check the target player.</string>
+    <string name="pref_do_search_key">do_search</string>
+    <string name="pref_do_search_false">Does not allow searching in URL bar</string>
+    <string name="pref_do_search_true">Allows searching in URL bar</string>
+    <string name="pref_do_search">Allow Searching</string>
+    <string name="action_settings">Settings</string>
 </resources>

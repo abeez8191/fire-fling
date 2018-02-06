@@ -12,4 +12,10 @@
         android:visible="false"
         app:showAsAction="always"
         tools:visibility="invisible" />
+
+    <item
+        android:id="@+id/action_settings"
+        android:orderInCategory="100"
+        android:title="@string/action_settings"
+        app:showAsAction="never" />
 </menu>
