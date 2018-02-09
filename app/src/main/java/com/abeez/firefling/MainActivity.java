@@ -8,6 +8,7 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.preference.PreferenceManager;
 import android.text.Editable;
@@ -44,6 +45,7 @@ import com.amazon.whisperplay.fling.media.service.MediaPlayerStatus;
 import com.amazon.whisperplay.fling.media.service.MediaPlayerStatus.MediaState;
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.InterstitialAd;
 import com.google.android.gms.ads.MobileAds;
 
@@ -59,6 +61,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -142,6 +145,9 @@ public class MainActivity extends AppCompatActivity implements
     private boolean mUserIsSeeking = false;
 
     private InterstitialAd mInterstitialAd;
+    private AdView mAdView;
+
+    private Handler mAdRefreshHandler = new Handler();
 
     private DiscoveryController.IDiscoveryListener mDiscovery =
             new DiscoveryController.IDiscoveryListener() {
@@ -238,6 +244,8 @@ public class MainActivity extends AppCompatActivity implements
         mInterstitialAd = new InterstitialAd(this);
         mInterstitialAd.setAdUnitId("ca-app-pub-3940256099942544/1033173712");
         //mInterstitialAd.setAdUnitId("ca-app-pub-6217417570479825/8493868628");
+
+        mAdView = findViewById(R.id.av_bannerAd);
 
         // Load saved instance items
         if(savedInstanceState != null) {
@@ -417,14 +425,12 @@ public class MainActivity extends AppCompatActivity implements
                 mUrlEditText.setText(url);
             }
 
-
-
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri url = request.getUrl();
-                Log.e(TAG, "Checking " + url.getHost());
+                Log.i(TAG, "Checking " + url.getHost());
                 if( AdBlocker.isAd(url.getHost()) ) {
-                    Log.e(TAG, "Blocking: " + url);
+                    Log.i(TAG, "Blocking: " + url);
                     return AdBlocker.createEmptyResource();
                 }
 
@@ -498,6 +504,25 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void onAdClosed() {
                 mInterstitialAd.loadAd(new AdRequest.Builder().build());
+            }
+        });
+
+        mAdView.loadAd(new AdRequest.Builder().build());
+        mAdView.setAdListener(new AdListener() {
+            @Override
+            public void onAdClosed() {
+                mAdView.loadAd(new AdRequest.Builder().build());
+            }
+
+            @Override
+            public void onAdLoaded() {
+                runOnUiThread(() -> {
+                    mAdRefreshHandler.postDelayed(()-> {
+                        mAdView.loadAd(new AdRequest.Builder().build());
+                        makeShortToast("Updating the ad now.");
+                        Log.e(TAG, "Updating the ad now.");
+                    }, 1 * 60 * 1000);
+                });
             }
         });
     }
@@ -629,6 +654,9 @@ public class MainActivity extends AppCompatActivity implements
             storeLastPlayer(false);
             clean();
         }
+
+        mAdRefreshHandler.removeCallbacksAndMessages(null);
+
         super.onPause();
     }
 
@@ -878,13 +906,15 @@ public class MainActivity extends AppCompatActivity implements
         Log.i(TAG, "try setMediaSource: url - " + name );
         mCurrentDevice.setMediaSource(name, "video", true, false).getAsync(
                 new FutureResultHandler(
-                        () -> {
-                            runOnUiThread(()->{
-                                if( mInterstitialAd.isLoaded()) {
-                                    mInterstitialAd.show();
-                                }
-                            });
-                        }, "setMediaSource", getString(R.string.error_attempting_to_play))
+                        () -> runOnUiThread(()->{
+                            if( mInterstitialAd.isLoaded()) {
+                                mInterstitialAd.show();
+                            }
+                            // When you fling, the video is playing, so make sure the
+                            // pause button is showing, not the play button.
+                            mPlayButton.setVisibility(View.INVISIBLE);
+                            mPauseButton.setVisibility(View.VISIBLE);
+                        }), "setMediaSource", getString(R.string.error_attempting_to_play))
                 );
                 //new ErrorResultHandler("setMediaSource", , true));
     }
@@ -894,13 +924,10 @@ public class MainActivity extends AppCompatActivity implements
             Log.i(TAG, "try doPlay...");
             mCurrentDevice.play().getAsync(
                     new FutureResultHandler(
-                            () -> {
-                                runOnUiThread(()->{
-                                    mPlayButton.setVisibility(View.INVISIBLE);
-                                    mPauseButton.setVisibility(View.VISIBLE);
-                                });
-
-                            }, "doPlay", getString(R.string.error_playing))
+                            () -> runOnUiThread(()->{
+                                mPlayButton.setVisibility(View.INVISIBLE);
+                                mPauseButton.setVisibility(View.VISIBLE);
+                            }), "doPlay", getString(R.string.error_playing))
             );
         }
     }
@@ -910,12 +937,10 @@ public class MainActivity extends AppCompatActivity implements
             Log.i(TAG, "try doPause...");
             mCurrentDevice.pause().getAsync(
                     new FutureResultHandler(
-                            () -> {
-                                runOnUiThread(()->{
-                                    mPlayButton.setVisibility(View.VISIBLE);
-                                    mPauseButton.setVisibility(View.INVISIBLE);
-                                });
-                            }, "doPause", getString(R.string.error_pausing)
+                            () -> runOnUiThread(()->{
+                                mPlayButton.setVisibility(View.VISIBLE);
+                                mPauseButton.setVisibility(View.INVISIBLE);
+                            }), "doPause", getString(R.string.error_pausing)
                     )
             );
         }
@@ -926,14 +951,12 @@ public class MainActivity extends AppCompatActivity implements
             Log.i(TAG, "try doStop...");
             mCurrentDevice.stop().getAsync(
                     new FutureResultHandler(
-                            () -> {
-                                runOnUiThread(() -> {
-                                    mMediaContainer.setVisibility(View.GONE);
-                                    setVideoDetectedVisibility();
-                                    mStatus.clear();
-                                    resetDuration();
-                                });
-                            }, "doStop", getString(R.string.error_stopping)
+                            () -> runOnUiThread(() -> {
+                                mMediaContainer.setVisibility(View.GONE);
+                                setVideoDetectedVisibility();
+                                mStatus.clear();
+                                resetDuration();
+                            }), "doStop", getString(R.string.error_stopping)
                     )
             );
         }
@@ -984,11 +1007,8 @@ public class MainActivity extends AppCompatActivity implements
         long hours = totalSecs / 3600;
         long minutes = (totalSecs / 60) % 60;
         long seconds = totalSecs % 60;
-        String hourString = (hours == 0) ? "00" : ((hours < 10) ? "0" + hours : "" + hours);
-        String minString = (minutes == 0) ? "00" : ((minutes < 10) ? "0" + minutes : "" + minutes);
-        String secString = (seconds == 0) ? "00" : ((seconds < 10) ? "0" + seconds : "" + seconds);
 
-        return hourString + ":" + minString + ":" + secString;
+        return String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds);
     }
 
     private void clean() {
