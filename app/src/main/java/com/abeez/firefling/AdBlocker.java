@@ -92,7 +92,7 @@ class AdBlocker {
         }
 
         if( AD_HOSTS.contains(hostname) ) {
-            Log.e("AdBlocker", "Blocking " + hostname);
+            Log.i("AdBlocker", "Blocking " + hostname);
             return true;
         }
 
@@ -118,11 +118,11 @@ class AdBlocker {
             Context context = contextRef.get();
             try {
                 if( fileExists( AD_HOSTS_FILE, context ) ) {
-                    Log.e(TAG, "Loading ad hosts in file.");
+                    Log.i(TAG, "Loading ad hosts in file.");
                     loadFromFile(context);
                 }
                 else {
-                    Log.e(TAG, "Downloading the ad hosts file.");
+                    Log.i(TAG, "Downloading the ad hosts file.");
                     downloadAdHostsFile(context);
                     loadFromFile(context);
                 }
