@@ -145,9 +145,9 @@ public class MainActivity extends AppCompatActivity implements
     private boolean mUserIsSeeking = false;
 
     private InterstitialAd mInterstitialAd;
-    private AdView mAdView;
+    //private AdView mAdView;
 
-    private Handler mAdRefreshHandler = new Handler();
+    //private Handler mAdRefreshHandler = new Handler();
 
     private DiscoveryController.IDiscoveryListener mDiscovery =
             new DiscoveryController.IDiscoveryListener() {
@@ -245,7 +245,7 @@ public class MainActivity extends AppCompatActivity implements
         mInterstitialAd.setAdUnitId("ca-app-pub-3940256099942544/1033173712");
         //mInterstitialAd.setAdUnitId("ca-app-pub-6217417570479825/8493868628");
 
-        mAdView = findViewById(R.id.av_bannerAd);
+        //mAdView = findViewById(R.id.av_bannerAd);
 
         // Load saved instance items
         if(savedInstanceState != null) {
@@ -507,7 +507,7 @@ public class MainActivity extends AppCompatActivity implements
             }
         });
 
-        mAdView.loadAd(new AdRequest.Builder().build());
+        /*mAdView.loadAd(new AdRequest.Builder().build());
         mAdView.setAdListener(new AdListener() {
             @Override
             public void onAdClosed() {
@@ -524,7 +524,7 @@ public class MainActivity extends AppCompatActivity implements
                     }, 1 * 60 * 1000);
                 });
             }
-        });
+        });*/
     }
 
     public void setVideoDetectedVisibility() {
@@ -655,7 +655,7 @@ public class MainActivity extends AppCompatActivity implements
             clean();
         }
 
-        mAdRefreshHandler.removeCallbacksAndMessages(null);
+        //mAdRefreshHandler.removeCallbacksAndMessages(null);
 
         super.onPause();
     }
