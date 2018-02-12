@@ -177,5 +177,20 @@
                     android:src="@drawable/ic_jump_forward_10_default_light_36dp" />
             </RelativeLayout>
         </LinearLayout>
+
+        <fragment android:name="com.abeez.firefling.BannerAdFragment"
+            android:id="@+id/f_bannerAd"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            />
+        <!--<com.google.android.gms.ads.AdView
+            xmlns:ads="http://schemas.android.com/apk/res-auto"
+            android:id="@+id/av_bannerAd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            ads:adSize="SMART_BANNER"
+            ads:adUnitId="ca-app-pub-3940256099942544/6300978111" />
+             ads:adUnitId="ca-app-pub-6217417570479825/8493868628"-->
+
     </LinearLayout>
 </RelativeLayout>

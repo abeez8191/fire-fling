@@ -29,4 +29,16 @@
     <string name="error_stopping">Error Stopping</string>
     <string name="error_seeking">Error Seeking</string>
     <string name="error_connecting_to_device">Problem with connection. Try again and check the target player.</string>
+    <string name="pref_do_search_key">do_search</string>
+    <string name="pref_do_search_false">Does not allow searching in URL bar</string>
+    <string name="pref_do_search_true">Allows searching in URL bar</string>
+    <string name="pref_do_search">Allow Searching</string>
+    <string name="action_settings">Settings</string>
+    <string name="bannerAd_unitId">ca-app-pub-3940256099942544/6300978111</string>
+    <!-- <string name="bannerAd_unitId">ca-app-pub-6217417570479825/8493868628</string> -->
+
+    <string name="interstitialAd_unitId">ca-app-pub-3940256099942544/1033173712</string>
+    <string name="adAppID">ca-app-pub-6217417570479825~5689587790</string>
+    <!-- <string name="interstitialAd_unitId">ca-app-pub-6217417570479825/8493868628</string> -->
+
 </resources>

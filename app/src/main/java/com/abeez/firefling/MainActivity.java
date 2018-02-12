@@ -2,12 +2,15 @@ package com.abeez.firefling;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.preference.PreferenceManager;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -42,6 +45,7 @@ import com.amazon.whisperplay.fling.media.service.MediaPlayerStatus;
 import com.amazon.whisperplay.fling.media.service.MediaPlayerStatus.MediaState;
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.InterstitialAd;
 import com.google.android.gms.ads.MobileAds;
 
@@ -57,6 +61,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -64,7 +69,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements
+        View.OnClickListener, SharedPreferences.OnSharedPreferenceChangeListener
+{
 
     private static final String BUNDLE_CURRENT_URL = "currentUrl";
 
@@ -104,11 +111,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     // List of device picker items.
     private List<String> mPickerList = new ArrayList<>();
 
-    // MediaSource manager to load media information from external storage
-    //private MediaSourceManager mManager;
-    // ListView for Media Source list
-    //private ListView mMediaListView;
-
     // Progress(SeekBar) of media duration
     private SeekBar mSeekBar;
     private Long mMediaDuration = 0L;
@@ -116,17 +118,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     // TextView to show total and current duration as number
     private TextView mTotalDuration;
     private TextView mCurrentDuration;
-    // Current Title and Media Status to show
-    //private TextView mCurrentStatusView;
-    //private TextView mMediaTitleView;
-    //private boolean mMediaTitleSet = false;
 
-    // Playback buttons as ImageView
-    //private ImageView mBackwardButton;
     private ImageView mPlayButton;
     private ImageView mPauseButton;
-    //private ImageView mStopButton;
-    //private ImageView mForwardButton;
 
     private Button mClearUrlButton;
     private LinearLayout mMediaContainer;
@@ -137,7 +131,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private boolean mAllowJavascript = true;
     private Set<String> mVideoList = new HashSet<>();
-    private URI currentUrl;
+    private URI currentUrl = Utils.convertStringToUri("file:///android_asset/homepage.html");
 
     // Shared preference name
     private static final String APP_SHARED_PREF_NAME = "com.abeez.firefling";
@@ -151,6 +145,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private boolean mUserIsSeeking = false;
 
     private InterstitialAd mInterstitialAd;
+    private String HOMEPAGE = "file:///android_asset/homepage.html";
 
     private DiscoveryController.IDiscoveryListener mDiscovery =
             new DiscoveryController.IDiscoveryListener() {
@@ -242,11 +237,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mController = new DiscoveryController(this);
 
         AdBlocker.init(this);
-        MobileAds.initialize(this, "ca-app-pub-6217417570479825~5689587790");
+        MobileAds.initialize(this, getString(R.string.adAppID));
 
         mInterstitialAd = new InterstitialAd(this);
-        mInterstitialAd.setAdUnitId("ca-app-pub-3940256099942544/1033173712");
-        //mInterstitialAd.setAdUnitId("ca-app-pub-6217417570479825/8493868628");
+        mInterstitialAd.setAdUnitId(getString(R.string.interstitialAd_unitId));
 
         // Load saved instance items
         if(savedInstanceState != null) {
@@ -257,9 +251,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             mWebView.restoreState(savedInstanceState);
         }
         else {
-            currentUrl = Utils.convertStringToUri("https://www.google.com");
+            currentUrl = Utils.convertStringToUri(HOMEPAGE);
             mWebView.loadUrl(currentUrl.toString());
         }
+
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        allowSearch = sharedPreferences.getBoolean(getString(R.string.pref_do_search_key),
+                getResources().getBoolean(R.bool.pref_do_search_default));
+
+        // Register the listener
+        sharedPreferences.registerOnSharedPreferenceChangeListener(this);
     }
 
     @Override
@@ -276,8 +277,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // Start Discovery Controller
         Log.i(TAG, "onResume - start Discovery");
         mController.start("amzn.thin.pl", mDiscovery);
-        // Set Adapter with media sources
-        //mMediaListView.setAdapter(new MediaListAdapter(this, mManager.getAllSources()));
         // Create device picker adapter
         mPickerAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_list_item_activated_1, mPickerList);
@@ -308,8 +307,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         mVideoDetectedNotification.setOnClickListener((view) -> {
             if( mVideoList.size() == 1 ) {
-                //mMediaContainer.setVisibility(View.VISIBLE);
-                //mVideoDetectedNotification.setVisibility(View.GONE);
                 fling(mCurrentDevice, mVideoList.toArray(new String[]{})[0]);
             }
             else {
@@ -319,8 +316,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 alertBuilder.setItems(videos, (dialogInterface, itemSelected) -> {
                     Log.e(TAG, "Flinging: " + videos[itemSelected]);
                     fling(mCurrentDevice, videos[itemSelected].toString());
-                    //mMediaContainer.setVisibility(View.VISIBLE);
-                    //mVideoDetectedNotification.setVisibility(View.GONE);
                 });
 
                 alertBuilder.show();
@@ -337,7 +332,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
 
-        if(! allowSearch ) {
+        if( allowSearch ) {
+            mUrlEditText.setHint(R.string.url_hint);
+        }
+        else {
             mUrlEditText.setHint(R.string.url_no_search_hint);
         }
         mUrlEditText.addTextChangedListener(new TextWatcher() {
@@ -359,7 +357,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void afterTextChanged(Editable editable) {}
         });
 
-        mUrlEditText.setText(currentUrl.toString());
+        setUrlText(currentUrl.toString());
         mUrlEditText.setSelectAllOnFocus(true);
 
         mUrlEditText.setOnEditorActionListener((textView, actionId, keyEvent) -> {
@@ -422,17 +420,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 super.onPageStarted(view, url, favicon);
 
                 mLoadingBar.setVisibility(View.VISIBLE);
-                mUrlEditText.setText(url);
+                setUrlText(url);
             }
-
-
 
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri url = request.getUrl();
-                Log.e(TAG, "Checking " + url.getHost());
+                Log.i(TAG, "Checking " + url.getHost());
                 if( AdBlocker.isAd(url.getHost()) ) {
-                    Log.e(TAG, "Blocking: " + url);
+                    Log.i(TAG, "Blocking: " + url);
                     return AdBlocker.createEmptyResource();
                 }
 
@@ -444,7 +440,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 super.onPageFinished(view, url);
 
                 currentUrl = Utils.convertStringToUri(mWebView.getUrl());
-                mUrlEditText.setText(currentUrl.toString());
+                setUrlText(currentUrl.toString());
                 Log.e(TAG, "URL: " + currentUrl.toString());
                 view.loadUrl("javascript:window.HtmlViewer.showHTML" +
                         "('<html>' + document.getElementsByTagName('html')[0].innerHTML+'</html>');");
@@ -474,7 +470,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     mVideoList.clear();
                     mVideoDetectedNotification.setVisibility(View.GONE);
                     setMediaContainerVisibility(View.GONE);
-                    mUrlEditText.setText(url);
+                    setUrlText(url);
                     currentUrl = uriLoading;
                     return false;
                 }
@@ -493,7 +489,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                 }
 
-                //currentUrl = uri;
                 super.onLoadResource(view, url);
             }
         });
@@ -509,6 +504,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 mInterstitialAd.loadAd(new AdRequest.Builder().build());
             }
         });
+    }
+
+    private void setUrlText(String text) {
+        if( ! currentUrl.toString().equals(HOMEPAGE) ) {
+            Log.e(TAG, "Current URL == " + currentUrl.toString());
+            setUrlText(currentUrl.toString());
+        }
     }
 
     public void setVideoDetectedVisibility() {
@@ -534,6 +536,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void setMediaContainerVisibility(int visibility) {
         synchronized(mStatusLock) {
             MediaState mState = mStatus.mState;
+            if( mState == null ) {
+                return;
+            }
+
             if( visibility == View.GONE || visibility == View.INVISIBLE) {
                 if( mState == MediaState.ReadyToPlay ||
                     mState == MediaState.Playing ||
@@ -634,6 +640,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             storeLastPlayer(false);
             clean();
         }
+
         super.onPause();
     }
 
@@ -647,6 +654,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onDestroy() {
         Log.e(TAG, "onDestroy");
         super.onDestroy();
+
+        // Unregister MainActivity as an OnPreferenceChangedListener to avoid any memory leaks.
+        PreferenceManager.getDefaultSharedPreferences(this)
+                .unregisterOnSharedPreferenceChangeListener(this);
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        Log.e(TAG, "Changing preference: " + key);
+        if( key.equals(getString(R.string.pref_do_search_key)) ) {
+            allowSearch = sharedPreferences.getBoolean(getString(R.string.pref_do_search_key),
+                    getResources().getBoolean(R.bool.pref_do_search_default));
+            Log.e(TAG, "allowSearch = " + Boolean.toString(allowSearch));
+        }
     }
 
     private void addVideo(String url) {
@@ -677,24 +698,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             mSeekBar.setProgress(0);
         }
     }
-
-/*    private void setProgressVisibility(boolean enable) {
-        Log.i(TAG, "setProgressVisibility:" + (enable ? "enable" : "disable"));
-        if (enable) {
-            mSeekBar.setVisibility(View.VISIBLE);
-            mCurrentDuration.setVisibility(View.VISIBLE);
-            mTotalDuration.setVisibility(View.VISIBLE);
-
-        } else {
-            mCurrentDuration.setText(convertTime(0));
-            mTotalDuration.setText(convertTime(0));
-            mSeekBar.setMax(0);
-            mSeekBar.setProgress(0);
-            mSeekBar.setVisibility(View.INVISIBLE);
-            mCurrentDuration.setVisibility(View.INVISIBLE);
-            mTotalDuration.setVisibility(View.INVISIBLE);
-        }
-    }*/
 
     private void setPickerIconVisibility(boolean enable) {
         Log.i(TAG, "setPickerIconVisibility: " + (enable ? "enable" : "disable"));
@@ -760,6 +763,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 return true;
             }
         }
+        else if( id == R.id.action_settings ) {
+            Intent startSettingsActivity = new Intent(this, SettingsActivity.class);
+            startActivity(startSettingsActivity);
+            return true;
+        }
         return super.onOptionsItemSelected(item);
     }
 
@@ -790,11 +798,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             new TotalDurationUpdateTask().execute();
 
                         }
-                        /*if (!mMediaTitleSet) {
-                            Log.i(TAG, "setStatusText - Playing: ReadyToPlay was missed." +
-                                    " media title needs to be set.");
-                            new MediaTitleUpdateTask().execute();
-                        }*/
+
                         //Update progress session
                         if (mMediaDuration > 0 && mDurationSet && !mUserIsSeeking) {
                             Log.i(TAG, "setStatusText - Playing: Set Progress");
@@ -802,9 +806,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             mCurrentDuration.setText(String.valueOf(convertTime(mStatus.mPosition)));
                             mSeekBar.setProgress((int) mStatus.mPosition);
                         }
-                        //mCurrentStatusView.setText(getString(R.string.media_playing));
-                        //setProgressVisibility(true);
-                        //setStatusAndTitleVisibility(true);
+
                         break;
                     case Paused:
                         Log.i(TAG, "setStatusText - Paused");
@@ -812,26 +814,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             new TotalDurationUpdateTask().execute();
                             new CurrentPositionUpdateTask().execute();
                         }
-                        /*if (!mMediaTitleSet) {
-                            new MediaTitleUpdateTask().execute();
-                        }*/
-                        //mCurrentStatusView.setText(getString(R.string.media_paused));
-                        //setProgressVisibility(true);
-                        //setStatusAndTitleVisibility(true);
                         break;
                     case Finished:
                         Log.i(TAG, "setStatusText - Finished");
-                        //mCurrentStatusView.setText(getString(R.string.media_done));
                         resetDuration();
                         break;
                     case Seeking:
                         Log.i(TAG, "setStatusText - Seeking");
-                        //mCurrentStatusView.setText(getString(R.string.media_seeking));
                         break;
                     case Error:
                         Log.i(TAG, "setStatusText - Error");
                         setMediaContainerVisibility(View.GONE);
-                        //mCurrentStatusView.setText(getString(R.string.media_error));
                         break;
                     default:
                         break;
@@ -865,10 +858,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 mCurrentDevice = null;
             }
             resetDuration();
-            //setStatusAndTitleVisibility(false);
             setPlaybackControlWorking(false);
             invalidateOptionsMenu();
-            //resetMediaTitle();
         });
     }
 
@@ -877,7 +868,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mCurrentDevice = target;
         mStatus.clear();
         resetDuration();
-        //resetMediaTitle();
     }
 
     private void makeShortToast(final String message) {
@@ -902,13 +892,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Log.i(TAG, "try setMediaSource: url - " + name );
         mCurrentDevice.setMediaSource(name, "video", true, false).getAsync(
                 new FutureResultHandler(
-                        () -> {
-                            runOnUiThread(()->{
-                                if( mInterstitialAd.isLoaded()) {
-                                    mInterstitialAd.show();
-                                }
-                            });
-                        }, "setMediaSource", getString(R.string.error_attempting_to_play))
+                        () -> runOnUiThread(()->{
+                            if( mInterstitialAd.isLoaded()) {
+                                mInterstitialAd.show();
+                            }
+                            // When you fling, the video is playing, so make sure the
+                            // pause button is showing, not the play button.
+                            mPlayButton.setVisibility(View.INVISIBLE);
+                            mPauseButton.setVisibility(View.VISIBLE);
+                        }), "setMediaSource", getString(R.string.error_attempting_to_play))
                 );
                 //new ErrorResultHandler("setMediaSource", , true));
     }
@@ -918,13 +910,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Log.i(TAG, "try doPlay...");
             mCurrentDevice.play().getAsync(
                     new FutureResultHandler(
-                            () -> {
-                                runOnUiThread(()->{
-                                    mPlayButton.setVisibility(View.INVISIBLE);
-                                    mPauseButton.setVisibility(View.VISIBLE);
-                                });
-
-                            }, "doPlay", getString(R.string.error_playing))
+                            () -> runOnUiThread(()->{
+                                mPlayButton.setVisibility(View.INVISIBLE);
+                                mPauseButton.setVisibility(View.VISIBLE);
+                            }), "doPlay", getString(R.string.error_playing))
             );
         }
     }
@@ -934,12 +923,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Log.i(TAG, "try doPause...");
             mCurrentDevice.pause().getAsync(
                     new FutureResultHandler(
-                            () -> {
-                                runOnUiThread(()->{
-                                    mPlayButton.setVisibility(View.VISIBLE);
-                                    mPauseButton.setVisibility(View.INVISIBLE);
-                                });
-                            }, "doPause", getString(R.string.error_pausing)
+                            () -> runOnUiThread(()->{
+                                mPlayButton.setVisibility(View.VISIBLE);
+                                mPauseButton.setVisibility(View.INVISIBLE);
+                            }), "doPause", getString(R.string.error_pausing)
                     )
             );
         }
@@ -950,14 +937,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Log.i(TAG, "try doStop...");
             mCurrentDevice.stop().getAsync(
                     new FutureResultHandler(
-                            () -> {
-                                runOnUiThread(() -> {
-                                    mMediaContainer.setVisibility(View.GONE);
-                                    setVideoDetectedVisibility();
-                                    mStatus.clear();
-                                    resetDuration();
-                                });
-                            }, "doStop", getString(R.string.error_stopping)
+                            () -> runOnUiThread(() -> {
+                                mMediaContainer.setVisibility(View.GONE);
+                                setVideoDetectedVisibility();
+                                mStatus.clear();
+                                resetDuration();
+                            }), "doStop", getString(R.string.error_stopping)
                     )
             );
         }
@@ -1008,11 +993,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         long hours = totalSecs / 3600;
         long minutes = (totalSecs / 60) % 60;
         long seconds = totalSecs % 60;
-        String hourString = (hours == 0) ? "00" : ((hours < 10) ? "0" + hours : "" + hours);
-        String minString = (minutes == 0) ? "00" : ((minutes < 10) ? "0" + minutes : "" + minutes);
-        String secString = (seconds == 0) ? "00" : ((seconds < 10) ? "0" + seconds : "" + seconds);
 
-        return hourString + ":" + minString + ":" + secString;
+        return String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds);
     }
 
     private void clean() {
@@ -1022,8 +1004,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mDeviceList.clear();
         mPickerDeviceList.clear();
         resetDuration();
-        //resetMediaTitle();
-        //setStatusAndTitleVisibility(false);
         setPickerIconVisibility(false);
         setPlaybackControlWorking(false);
     }
@@ -1053,7 +1033,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     if (mStatus.mState == MediaState.ReadyToPlay) {
                         runOnUiThread(MainActivity.this::resetDuration);
                         new TotalDurationUpdateTask().execute();
-                        //new MediaTitleUpdateTask().execute();
                     }
                 }
                 setStatusText();
@@ -1121,9 +1100,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     mCurrentDevice = null;
                     invalidateOptionsMenu();
                     setPlaybackControlWorking(false);
-                    //setStatusAndTitleVisibility(false);
                     resetDuration();
-                    //resetMediaTitle();
                     break;
                 case 2:
                     // error handle
@@ -1171,7 +1148,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 setStatusText();
                 MenuItem item = mMenu.findItem(R.id.menu_fling);
                 item.setIcon(R.drawable.ic_whisperplay_default_blue_light_48dp);
-                //setStatusAndTitleVisibility(true);
                 setPlaybackControlWorking(true);
                 invalidateOptionsMenu();
             } else {
@@ -1179,43 +1155,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
     }
-
-/*    private class MediaTitleUpdateTask extends AsyncTask<Void, Void, MediaPlayerInfo> {
-        private static final String TAG = "MediaTitleUpdateTask";
-
-        @Override
-        protected MediaPlayerInfo doInBackground(Void... voids) {
-            int threadId = android.os.Process.myTid();
-            if (mCurrentDevice != null) {
-                try {
-                    Log.i(TAG, "["+threadId+"]"+"MediaTitleUpdateTask:getMediaInfo");
-                    return mCurrentDevice.getMediaInfo().get();
-                } catch (InterruptedException e) {
-                    Log.e(TAG, "["+threadId+"]"+"InterruptedException msg=" + e);
-                    return null;
-                } catch (ExecutionException e) {
-                    Log.e(TAG, "["+threadId+"]"+"ExecutionException msg=" + e);
-                    return null;
-                }
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(MediaPlayerInfo result) {
-            if (result != null) {
-                //try {
-                    //JSONObject jobj = (JSONObject) new JSONTokener(result.getMetadata()).nextValue();
-                    Log.i(TAG, "[main]" + "MediaTitleUpdateTask:onPostExecute:set mediaTitleView");
-                    //mMediaTitleView.setText((String)jobj.get("title"));
-                    //setStatusAndTitleVisibility(true);
-                    mMediaTitleSet = true;
-*//*                } catch (JSONException e) {
-                    Log.e(TAG, "Cannot parse Metadata", e);
-                }*//*
-            }
-        }
-    }*/
 
     private class CurrentPositionUpdateTask extends AsyncTask<Void, Void, Long> {
         private static final String TAG = "CurrentPosUpdateTask";

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <SwitchPreference
+        android:defaultValue="@bool/pref_do_search_default"
+        android:key="@string/pref_do_search_key"
+        android:summaryOff="@string/pref_do_search_false"
+        android:summaryOn="@string/pref_do_search_true"
+        android:title="@string/pref_do_search" />
+</PreferenceScreen>

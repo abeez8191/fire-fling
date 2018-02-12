@@ -34,6 +34,10 @@ class Utils {
             return convertToUri(potentialUrl);
         }
 
+        if( potentialUrl.startsWith("file") ) {
+            return convertToUri(potentialUrl);
+        }
+
         if( potentialUrl.contains(".") && ! potentialUrl.contains(" ") ) {
             return convertToUri("http://" + potentialUrl);
         }
