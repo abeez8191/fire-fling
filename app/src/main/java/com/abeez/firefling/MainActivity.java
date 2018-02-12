@@ -131,7 +131,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private boolean mAllowJavascript = true;
     private Set<String> mVideoList = new HashSet<>();
-    private URI currentUrl;
+    private URI currentUrl = Utils.convertStringToUri("file:///android_asset/homepage.html");
 
     // Shared preference name
     private static final String APP_SHARED_PREF_NAME = "com.abeez.firefling";
@@ -145,9 +145,7 @@ public class MainActivity extends AppCompatActivity implements
     private boolean mUserIsSeeking = false;
 
     private InterstitialAd mInterstitialAd;
-    //private AdView mAdView;
-
-    //private Handler mAdRefreshHandler = new Handler();
+    private String HOMEPAGE = "file:///android_asset/homepage.html";
 
     private DiscoveryController.IDiscoveryListener mDiscovery =
             new DiscoveryController.IDiscoveryListener() {
@@ -239,13 +237,10 @@ public class MainActivity extends AppCompatActivity implements
         mController = new DiscoveryController(this);
 
         AdBlocker.init(this);
-        MobileAds.initialize(this, "ca-app-pub-6217417570479825~5689587790");
+        MobileAds.initialize(this, getString(R.string.adAppID));
 
         mInterstitialAd = new InterstitialAd(this);
-        mInterstitialAd.setAdUnitId("ca-app-pub-3940256099942544/1033173712");
-        //mInterstitialAd.setAdUnitId("ca-app-pub-6217417570479825/8493868628");
-
-        //mAdView = findViewById(R.id.av_bannerAd);
+        mInterstitialAd.setAdUnitId(getString(R.string.interstitialAd_unitId));
 
         // Load saved instance items
         if(savedInstanceState != null) {
@@ -256,7 +251,7 @@ public class MainActivity extends AppCompatActivity implements
             mWebView.restoreState(savedInstanceState);
         }
         else {
-            currentUrl = Utils.convertStringToUri("https://www.google.com");
+            currentUrl = Utils.convertStringToUri(HOMEPAGE);
             mWebView.loadUrl(currentUrl.toString());
         }
 
@@ -337,7 +332,10 @@ public class MainActivity extends AppCompatActivity implements
             }
         });
 
-        if(! allowSearch ) {
+        if( allowSearch ) {
+            mUrlEditText.setHint(R.string.url_hint);
+        }
+        else {
             mUrlEditText.setHint(R.string.url_no_search_hint);
         }
         mUrlEditText.addTextChangedListener(new TextWatcher() {
@@ -359,7 +357,7 @@ public class MainActivity extends AppCompatActivity implements
             public void afterTextChanged(Editable editable) {}
         });
 
-        mUrlEditText.setText(currentUrl.toString());
+        setUrlText(currentUrl.toString());
         mUrlEditText.setSelectAllOnFocus(true);
 
         mUrlEditText.setOnEditorActionListener((textView, actionId, keyEvent) -> {
@@ -422,7 +420,7 @@ public class MainActivity extends AppCompatActivity implements
                 super.onPageStarted(view, url, favicon);
 
                 mLoadingBar.setVisibility(View.VISIBLE);
-                mUrlEditText.setText(url);
+                setUrlText(url);
             }
 
             @Override
@@ -442,7 +440,7 @@ public class MainActivity extends AppCompatActivity implements
                 super.onPageFinished(view, url);
 
                 currentUrl = Utils.convertStringToUri(mWebView.getUrl());
-                mUrlEditText.setText(currentUrl.toString());
+                setUrlText(currentUrl.toString());
                 Log.e(TAG, "URL: " + currentUrl.toString());
                 view.loadUrl("javascript:window.HtmlViewer.showHTML" +
                         "('<html>' + document.getElementsByTagName('html')[0].innerHTML+'</html>');");
@@ -472,7 +470,7 @@ public class MainActivity extends AppCompatActivity implements
                     mVideoList.clear();
                     mVideoDetectedNotification.setVisibility(View.GONE);
                     setMediaContainerVisibility(View.GONE);
-                    mUrlEditText.setText(url);
+                    setUrlText(url);
                     currentUrl = uriLoading;
                     return false;
                 }
@@ -506,25 +504,13 @@ public class MainActivity extends AppCompatActivity implements
                 mInterstitialAd.loadAd(new AdRequest.Builder().build());
             }
         });
+    }
 
-        /*mAdView.loadAd(new AdRequest.Builder().build());
-        mAdView.setAdListener(new AdListener() {
-            @Override
-            public void onAdClosed() {
-                mAdView.loadAd(new AdRequest.Builder().build());
-            }
-
-            @Override
-            public void onAdLoaded() {
-                runOnUiThread(() -> {
-                    mAdRefreshHandler.postDelayed(()-> {
-                        mAdView.loadAd(new AdRequest.Builder().build());
-                        makeShortToast("Updating the ad now.");
-                        Log.e(TAG, "Updating the ad now.");
-                    }, 1 * 60 * 1000);
-                });
-            }
-        });*/
+    private void setUrlText(String text) {
+        if( ! currentUrl.toString().equals(HOMEPAGE) ) {
+            Log.e(TAG, "Current URL == " + currentUrl.toString());
+            setUrlText(currentUrl.toString());
+        }
     }
 
     public void setVideoDetectedVisibility() {
@@ -655,8 +641,6 @@ public class MainActivity extends AppCompatActivity implements
             clean();
         }
 
-        //mAdRefreshHandler.removeCallbacksAndMessages(null);
-
         super.onPause();
     }
 
@@ -678,9 +662,11 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        Log.e(TAG, "Changing preference: " + key);
         if( key.equals(getString(R.string.pref_do_search_key)) ) {
             allowSearch = sharedPreferences.getBoolean(getString(R.string.pref_do_search_key),
                     getResources().getBoolean(R.bool.pref_do_search_default));
+            Log.e(TAG, "allowSearch = " + Boolean.toString(allowSearch));
         }
     }
 

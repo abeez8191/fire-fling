@@ -22,7 +22,6 @@ public class BannerAdFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        Log.e(TAG, "onCreateView");
         View rootView = inflater.inflate(R.layout.ad_fragment, container, false);
         mAdView = rootView.findViewById(R.id.av_bannerAd);
 
@@ -31,7 +30,6 @@ public class BannerAdFragment extends Fragment {
 
     @Override
     public void onResume() {
-        Log.e(TAG, "onResume");
         super.onResume();
 
         mAdView.loadAd(new AdRequest.Builder().build());
@@ -45,8 +43,8 @@ public class BannerAdFragment extends Fragment {
             public void onAdLoaded() {
                 getActivity().runOnUiThread(() -> {
                     mAdRefreshHandler.postDelayed(()-> {
-                        mAdView.loadAd(new AdRequest.Builder().build());
                         Log.e(TAG, "Updating the ad now.");
+                        mAdView.loadAd(new AdRequest.Builder().build());
                     }, 5 * 60 * 1000);
                 });
             }
