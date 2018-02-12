@@ -508,8 +508,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private void setUrlText(String text) {
         if( ! currentUrl.toString().equals(HOMEPAGE) ) {
-            Log.e(TAG, "Current URL == " + currentUrl.toString());
-            setUrlText(currentUrl.toString());
+            mUrlEditText.setText(currentUrl.toString());
         }
     }
 
